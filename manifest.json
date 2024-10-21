@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub show all diffs",
+  "version": "1.0",
+  "description": "Automatically expands all file diffs on GitHub PR files pages",
+  "permissions": ["scripting"],
+  "host_permissions": ["https://github.com/*/*/pull/*/files"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {}
+}
