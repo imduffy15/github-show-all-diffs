@@ -1,0 +1,53 @@
+name: Build and Release Chrome Extension
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get short SHA
+      id: slug
+      run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Update manifest version
+      run: |
+        jq '.version = "1.0.0.${{ steps.slug.outputs.SHORT_SHA }}"' manifest.json > manifest_tmp.json
+        mv manifest_tmp.json manifest.json
+
+    - name: Create zip file and rename to crx
+      run: |
+        zip -r github-pr-files-extension-${{ steps.slug.outputs.SHORT_SHA }}.zip manifest.json content.js background.js
+        mv github-pr-files-extension-${{ steps.slug.outputs.SHORT_SHA }}.zip github-pr-files-extension-${{ steps.slug.outputs.SHORT_SHA }}.crx
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v1.0.0-${{ steps.slug.outputs.SHORT_SHA }}
+        release_name: Release v1.0.0-${{ steps.slug.outputs.SHORT_SHA }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./github-pr-files-extension-${{ steps.slug.outputs.SHORT_SHA }}.crx
+        asset_name: github-pr-files-extension-${{ steps.slug.outputs.SHORT_SHA }}.crx
+        asset_content_type: application/x-chrome-extension
+
+    - name: Upload crx file as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: github-pr-files-extension-${{ steps.slug.outputs.SHORT_SHA }}
+        path: github-pr-files-extension-${{ steps.slug.outputs.SHORT_SHA }}.crx
